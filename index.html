@@ -635,7 +635,7 @@ function tryRestore() {
 }
 
 // ---------- Login ----------
-let loginSel = null, loginErr = "";
+let loginSel = null, loginErr = "", loginName = "";
 function viewLogin() {
   const clients = (S.config?.clients || []).filter(c => c.active !== false);
   let body;
@@ -644,13 +644,13 @@ function viewLogin() {
   else if (S.platform === "slow") body = `<p class="muted small">Die Verbindung braucht gerade länger. Prüfe dein Internet, der Club lädt weiter.</p>`;
   else if (!S.config) body = `<div class="card" style="text-align:left"><h3>Der Club wird gerade eingerichtet</h3><p class="small">Schau gleich nochmal vorbei.</p></div>`;
   else body = `<form id="loginForm" autocomplete="off">
-      <div class="label" style="text-align:center">Wer bist du?</div>
-      <div class="who">${clients.map(c => `<button type="button" class="${loginSel === c.key ? "on" : ""}" data-act="pick" data-k="${c.key}">${esc(c.name)}</button>`).join("")}
-        <button type="button" class="coach ${loginSel === "__coach" ? "on" : ""}" data-act="pick" data-k="__coach">Coach-Bereich</button></div>
+      <div class="label" style="text-align:center">${loginSel === "__coach" ? "Coach-Bereich" : "Willkommen zurück"}</div>
+      ${loginSel === "__coach" ? "" : `<div class="field"><label for="nm">Deine E-Mail-Adresse</label><input class="inp" id="nm" type="text" inputmode="email" autocomplete="username" autocapitalize="none" placeholder="name@beispiel.de" value="${esc(loginName)}"></div>`}
       <div class="field"><label for="pw">Dein Passwort</label><input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="Passwort eingeben"></div>
       <label class="check small"><input type="checkbox" id="remember"> Auf diesem Gerät angemeldet bleiben</label>
       <div class="err" role="alert">${esc(loginErr)}</div>
       <button class="btn block" type="submit">Club betreten</button>
+      <button type="button" class="linkbtn" data-act="pick" data-k="${loginSel === "__coach" ? "" : "__coach"}" style="align-self:center;margin-top:6px">${loginSel === "__coach" ? "Zurück zur Anmeldung" : "Coach-Bereich"}</button>
     </form>`;
   return `<main class="shell"><div class="login">
     <img class="logo" src="${LOGO}" alt="Her Movement Logo">
@@ -661,16 +661,21 @@ function viewLogin() {
 }
 async function doLogin() {
   const pw = $("#pw")?.value || ""; const remember = $("#remember")?.checked;
-  if (!loginSel) { loginErr = "Wähl bitte zuerst deinen Namen aus."; render(); return; }
+  const coach = loginSel === "__coach";
+  if (!coach) loginName = ($("#nm")?.value || "").trim();
+  if (!coach && !loginName) { loginErr = "Bitte gib deine E-Mail-Adresse ein."; render(); return; }
   if (!pw) { loginErr = "Bitte gib dein Passwort ein."; render(); return; }
   const h = await sha(pw.trim());
-  const r = await window.HM.login(loginSel, h, remember);
+  const r = coach ? await window.HM.login("__coach", h, remember) : await window.HM.loginName(loginName, h, remember);
   if (!r || !r.ok) {
-    loginErr = r && r.err === "locked" ? "Zu viele Versuche. Bitte warte 15 Minuten." : r && r.err === "network" ? "Keine Verbindung. Bitte prüfe dein Internet." : loginSel === "__coach" ? "Das Passwort stimmt nicht." : "Das Passwort stimmt nicht. Groß- und Kleinschreibung beachten.";
+    loginErr = r && r.err === "locked" ? "Zu viele Versuche. Bitte warte 15 Minuten." : r && r.err === "network" ? "Keine Verbindung. Bitte prüfe dein Internet." : coach ? "Das Passwort stimmt nicht." : "E-Mail oder Passwort stimmt nicht. Groß- und Kleinschreibung beim Passwort beachten.";
     render(); return;
   }
   S.uid = r.uid; S.owner = r.role === "coach"; loginErr = "";
-  if (r.role === "coach") enterCoach(); else enterClient(r.key);
+  if (r.role === "coach") { enterCoach(); return; }
+  const cl = (S.config && S.config.clients) || [];
+  if (!cl.some(x => x.key === r.key)) S.config = Object.assign({}, S.config, { clients: cl.concat([{ key: r.key, name: r.name || loginName, active: true }]) });
+  enterClient(r.key);
 }
 function logout() { ss.del("hm_sess"); ls.del("hm_sess"); window.HM.logout(); S.unsub.forEach(u => { try { u(); } catch (e) {} }); S.unsub = []; S.sess = null; loginSel = null; S.route = "home"; S.profile = null; S.days = {}; S.c.subbed = {}; closeLayer(); render(); }
 
@@ -1585,12 +1590,13 @@ function coachChallenges() {
 }
 function coachClients() {
   const cl = S.config?.clients || [];
-  return `<div class="pageh"><div class="eyebrow">Zugänge</div><h1>Kundinnen</h1><p class="small muted">Jede Kundin meldet sich mit ihrem Namen und Passwort an. Inaktive Kundinnen tauchen im Login nicht auf.</p></div>
+  return `<div class="pageh"><div class="eyebrow">Zugänge</div><h1>Kundinnen</h1><p class="small muted">Jede Kundin meldet sich mit ihrer E-Mail-Adresse und ihrem Passwort an. Inaktive Kundinnen können sich nicht anmelden.</p></div>
   ${cl.map((c, i) => `<section class="card"><div class="row between"><h3>${esc(c.name)}</h3><div class="row">${uidFor(c.key) ? `<span class="pill good">angemeldet</span>` : `<span class="pill">noch nicht angemeldet</span>`}<button class="btn small ${c.active === false ? "" : "quiet"}" data-act="toggleActive" data-i="${i}">${c.active === false ? "Aktivieren" : "Deaktivieren"}</button></div></div>
+   <div class="row" style="flex-wrap:nowrap"><input class="inp" id="nem${i}" type="email" autocapitalize="none" placeholder="E-Mail-Adresse" value="${esc(c.email || "")}"><button class="btn small ghost" data-act="setEmail" data-i="${i}">E-Mail speichern</button></div>${c.email ? "" : `<p class="tiny" style="color:var(--warn)">Noch keine E-Mail hinterlegt. Bis dahin meldet sie sich mit ihrem Vornamen an.</p>`}
    <div class="row" style="flex-wrap:nowrap"><input class="inp" id="npw${i}" placeholder="Neues Passwort"><button class="btn small ghost" data-act="setPw" data-i="${i}">Passwort setzen</button></div></section>`).join("")}
-  <section class="card"><h3>Neue Kundin</h3><div class="grid2"><input class="inp" id="newName" placeholder="Name"><input class="inp" id="newPw" placeholder="Passwort"></div><button class="btn small" data-act="addClient" style="align-self:flex-start">Anlegen</button></section>
+  <section class="card"><h3>Neue Kundin</h3><div class="grid2"><input class="inp" id="newName" placeholder="Vorname"><input class="inp" id="newPw" placeholder="Passwort"></div><input class="inp" id="newEmail" type="email" autocapitalize="none" placeholder="E-Mail-Adresse"><button class="btn small" data-act="addClient" style="align-self:flex-start">Anlegen</button></section>
   <section class="card"><h3>Dein Coach-Passwort</h3><div class="row" style="flex-wrap:nowrap"><input class="inp" id="coachPw" placeholder="Neues Coach-Passwort"><button class="btn small ghost" data-act="setCoachPw">Ändern</button></div></section>
-  <div class="banner">${I.info}<div class="grow small">Neue Kundin: Name und Passwort hier anlegen, dann ihr den Link zur App und ihr Passwort schicken. Ein Claude-Konto braucht sie nicht.</div></div>`;
+  <div class="banner">${I.info}<div class="grow small">Neue Kundin: Vorname, E-Mail und Passwort hier anlegen, dann ihr den Link zur App und ihr Passwort schicken. Hat sie ihr Passwort vergessen, setzt du hier ein neues. Ein Claude-Konto braucht sie nicht.</div></div>`;
 }
 async function saveConfig(cfg) { const ok = await writeNow("club/config", cfg); if (ok) toast("Gespeichert"); }
 
@@ -1697,8 +1703,9 @@ document.addEventListener("click", async e => {
     case "chDel": S.c.ch.splice(+d.i, 1); render(); break;
     case "chSave": { const ok = await writeNow("club/challenges", { list: S.c.ch.filter(c => c.title).map(c => Object.assign({}, c, { points: num(c.points) })) }); if (ok) { toast("Challenges gespeichert"); S.c.ch = null; } render(); break; }
     case "toggleActive": { const cfg = clone(S.config); const c = cfg.clients[+d.i]; c.active = c.active === false; await saveConfig(cfg); break; }
-    case "setPw": { const v = ($("#npw" + d.i)?.value || "").trim(); if (v.length < 6) { toast("Mindestens 6 Zeichen"); break; } const cfg = clone(S.config); cfg.clients[+d.i].hash = await sha(v); await saveConfig(cfg); break; }
-    case "addClient": { const n = ($("#newName")?.value || "").trim(), pw = ($("#newPw")?.value || "").trim(); if (!n || pw.length < 6) { toast("Name und Passwort (mind. 6 Zeichen) eintragen"); break; } const cfg = clone(S.config); const key = n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "") + (cfg.clients.some(c => c.key === n.toLowerCase()) ? uidGen().slice(0, 3) : ""); cfg.clients.push({ key, name: n, active: true, hash: await sha(pw) }); await saveConfig(cfg); break; }
+    case "setEmail": { const v = ($("#nem" + d.i)?.value || "").trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) { toast("Bitte eine gültige E-Mail eintragen"); break; } if ((S.config.clients || []).some((c, j) => j !== +d.i && (c.email || "") === v)) { toast("Diese E-Mail ist schon vergeben"); break; } const cfg = clone(S.config); cfg.clients[+d.i].email = v; await saveConfig(cfg); break; }
+case "setPw": { const v = ($("#npw" + d.i)?.value || "").trim(); if (v.length < 6) { toast("Mindestens 6 Zeichen"); break; } const cfg = clone(S.config); cfg.clients[+d.i].hash = await sha(v); await saveConfig(cfg); break; }
+    case "addClient": { const n = ($("#newName")?.value || "").trim(), pw = ($("#newPw")?.value || "").trim(), em = ($("#newEmail")?.value || "").trim().toLowerCase(); if (!n || pw.length < 6 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { toast("Vorname, gültige E-Mail und Passwort (mind. 6 Zeichen) eintragen"); break; } if ((S.config.clients || []).some(c => (c.email || "") === em)) { toast("Diese E-Mail ist schon vergeben"); break; } const cfg = clone(S.config); const key = n.toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g, "") + (cfg.clients.some(c => c.key === n.toLowerCase()) ? uidGen().slice(0, 3) : ""); cfg.clients.push({ key, name: n, email: em, active: true, hash: await sha(pw) }); await saveConfig(cfg); break; }
     case "setCoachPw": { const v = ($("#coachPw")?.value || "").trim(); if (v.length < 8) { toast("Mindestens 8 Zeichen"); break; } const cfg = clone(S.config); cfg.coachHash = await sha(v); await saveConfig(cfg); const sess = ss.get("hm_sess"); if (sess) { sess.hash = cfg.coachHash; ss.set("hm_sess", sess); if (ls.get("hm_sess")) ls.set("hm_sess", sess); } break; }
   }
 });

@@ -161,6 +161,21 @@
       }
       return d;
     },
+    loginName: async function (name, hash, remember) {
+      await ready;
+      var r = await sb.rpc("club_login_email", { p_login: name, p_hash: hash });
+      if (r.error) return { ok: false, err: "network" };
+      var d = r.data || {};
+      if (d.ok) {
+        sessInfo = { uid: d.uid, role: d.role, key: d.key };
+        try {
+          if (remember) localStorage.removeItem("hm_ephemeral");
+          else { localStorage.setItem("hm_ephemeral", "1"); sessionStorage.setItem("hm_alive", "1"); }
+        } catch (x) {}
+        refreshAll();
+      }
+      return d;
+    },
     logout: async function () {
       sessInfo = null;
       try { await sb.rpc("club_logout"); } catch (x) {}
