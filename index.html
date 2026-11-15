@@ -4594,6 +4594,9 @@ const _coachMoreSM = coachMore;
 coachMore = function () { return _coachMoreSM().replace(`<div class="sec-h"><h3>Einstellungen</h3></div><div class="grid2">`, `<div class="sec-h"><h3>Einstellungen</h3></div><div class="grid2"><button class="tile" data-act="meTab" data-v="datenschutz">${I.info}<b>Datenschutz & Daten</b><span>Einwilligung, PDF, Löschen</span></button><button class="tile" data-act="meTab" data-v="einwilligung">${I.info}<b>Einwilligung</b><span>Vorschau wie bei den Mädels</span></button>`); };
 const _moreSM = VIEWS.more;
 VIEWS.more = () => _moreSM().replace(`<div class="sec-h"><h3>Persönliches & Einstellungen</h3></div><div class="grid2">`, `<div class="sec-h"><h3>Persönliches & Einstellungen</h3></div><div class="grid2"><button class="tile" data-act="go" data-r="datenschutz">${I.info}<b>Datenschutz & Daten</b><span>Einwilligung, PDF, Löschen</span></button>`) + `<p class="tiny muted" style="text-align:center"><a href="${DS_URL}" target="_blank" rel="noopener">Datenschutz</a> · <a href="${IMP_URL}" target="_blank" rel="noopener">Impressum</a></p>`;
+const _moreHC = VIEWS.more;
+VIEWS.more = () => _moreHC().replace(`<div class="sec-h"><h3>Persönliches & Einstellungen</h3></div><div class="grid2">`, `<div class="sec-h"><h3>Persönliches & Einstellungen</h3></div><div class="grid2"><a class="tile" href="cycle/" target="_blank" rel="noopener" style="border-color:var(--gold);text-decoration:none">${I.moon}<b>HER Cycle</b><span>8-Wochen-Gruppe · eigener Login</span></a>`);
+
 // Coach: Tagesform-Tab + Übersicht „geteilt / länger nicht da“
 const _coachClientSM = coachClient;
 coachClient = function () {
