@@ -2,7 +2,10 @@
    Jeden Tag ploppt ein Türchen auf (vor dem Morgen-Check). Alle Türchen bis heute
    lassen sich über „Adventskalender“ auf der Startseite wieder öffnen.
    Coach sieht unter Mehr → „Adventskalender“ eine Vorschau aller 24 Türchen. */
-const ADV_YEAR = 2026, ADV_CODE = "Xmas-HappyME15", ADV_VALID = "31.01.2027";
+const ADV_YEAR = 2026, ADV_VALID = "31.01.2027";
+// Gutschein am 24.12.: Standard 15 €, einzelne Kundinnen können einen eigenen Betrag bekommen (Schlüssel = Kundinnen-Kürzel)
+const ADV_GIFT = { "*": [15, "Xmas-HappyME15"], tina: [50, "Xmas-HappyME50"] };
+const advGift = () => ADV_GIFT[S.profile?.key] || ADV_GIFT["*"];
 const ADV = [
   ["s", "Diese Zeit gehört auch dir", "Der Dezember ist voll mit Terminen, Geschenken und To-dos. Nimm dir heute 10 Minuten nur für dich: Tee, Musik, durchatmen. Du hast es verdient."],
   ["u", "Kniebeugen in Zeitlupe", "3 × 12 Kniebeugen. 3 Sekunden runter, kurz halten, kraftvoll hoch. Füße hüftbreit, Knie zeigen in Richtung Zehen."],
@@ -51,10 +54,10 @@ const ADV_CSS = `.adv-ov{position:fixed;inset:0;z-index:9100;background:rgba(5,4
 function advContent(n) {
   const [t, h, txt] = ADV[n - 1], T = ADV_T[t];
   if (t === "g") return `<p class="eyebrow" style="margin:0">${T[0]} Türchen 24 · ${T[1]}</p><h2 style="margin:0">${h}</h2>
-    <p style="margin:0;line-height:1.5">Danke, dass du dieses Jahr mit mir unterwegs warst. Als kleines Dankeschön bekommst du <b class="gold">15 € Rabatt auf einen Leistungsmonat deiner Wahl</b>.</p>
-    <div class="adv-code" aria-label="Rabattcode">${ADV_CODE}</div>
-    <p class="tiny muted" style="margin:0">Einlösbar bis ${ADV_VALID}. Schick mir einfach den Code, ich ziehe die 15 € bei deiner nächsten Rechnung ab.</p>
-    <div class="row" style="justify-content:center;gap:8px"><button class="btn small quiet" data-act="advCopy">Code kopieren</button><a class="btn small" href="https://wa.me/491638550620?text=${encodeURIComponent("Hallo Lisa-Marie 🎄 Ich möchte meinen Weihnachts-Code einlösen: " + ADV_CODE)}" target="_blank" rel="noopener">Per WhatsApp einlösen</a></div>`;
+    <p style="margin:0;line-height:1.5">Danke, dass du dieses Jahr mit mir unterwegs warst. Als kleines Dankeschön bekommst du <b class="gold">${advGift()[0]} € Rabatt auf einen Leistungsmonat deiner Wahl</b>.</p>
+    <div class="adv-code" aria-label="Rabattcode">${advGift()[1]}</div>
+    <p class="tiny muted" style="margin:0">Einlösbar bis ${ADV_VALID}. Schick mir einfach den Code, ich ziehe die ${advGift()[0]} € bei deiner nächsten Rechnung ab.</p>${S.sess?.role === "coach" ? `<p class="tiny" style="margin:0;color:var(--lilac)">Vorschau für dich: Alle sehen ${ADV_GIFT["*"][0]} € (${ADV_GIFT["*"][1]}), Tina sieht ${ADV_GIFT.tina[0]} € (${ADV_GIFT.tina[1]}).</p>` : ""}
+    <div class="row" style="justify-content:center;gap:8px"><button class="btn small quiet" data-act="advCopy">Code kopieren</button><a class="btn small" href="https://wa.me/491638550620?text=${encodeURIComponent("Hallo Lisa-Marie 🎄 Ich möchte meinen Weihnachts-Code einlösen: " + advGift()[1])}" target="_blank" rel="noopener">Per WhatsApp einlösen</a></div>`;
   return `<p class="eyebrow" style="margin:0">${T[0]} Türchen ${n} · ${T[1]}</p><h2 style="margin:0">${esc(h)}</h2><p style="margin:0;line-height:1.55;font-size:1.02rem">${esc(txt)}</p>${t === "u" ? `<p class="tiny muted" style="margin:0">Mach nur, was sich heute gut anfühlt.</p>` : ""}`;
 }
 function advOverlay(n, reveal) {
@@ -93,6 +96,6 @@ window.addEventListener("click", e => {
   if (a === "advReveal") { e.stopImmediatePropagation(); advRevealed = true; advOverlay(advOpenNow || advToday(), true); }
   else if (a === "advClose") { e.stopImmediatePropagation(); advClose(); }
   else if (a === "advShow") { e.stopImmediatePropagation(); advOpenNow = +b.dataset.v; advOverlay(advOpenNow, true); }
-  else if (a === "advCopy") { e.stopImmediatePropagation(); try { navigator.clipboard.writeText(ADV_CODE).then(() => toast("Code kopiert")); } catch (x) { toast(ADV_CODE); } }
+  else if (a === "advCopy") { e.stopImmediatePropagation(); try { navigator.clipboard.writeText(advGift()[1]).then(() => toast("Code kopiert")); } catch (x) { toast(advGift()[1]); } }
 }, true);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && document.getElementById("advOv")) advClose(); });

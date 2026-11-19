@@ -1,5 +1,5 @@
 // Einfacher Offline-Cache für die App-Hülle. Daten kommen immer live aus Supabase.
-const CACHE = "hm-v7";
+const CACHE = "hm-v8";
 const SHELL = ["./", "index.html", "hm-platform.js", "hm-scan.js", "hm-v2.js", "hm-advent.js", "hm-extra.css", "supabase.js", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
