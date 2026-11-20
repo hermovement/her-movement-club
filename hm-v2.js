@@ -51,20 +51,22 @@ doRender = function () { _doRenderV2(); try { v2TryRestore(); } catch (e) { } };
 
 // ---------- 2) Tagespunkte pro Kundin ----------
 const V2_PK = ["training", "mobility", "food", "goals", "journal", "checkups"];
+// Challenge-Punkte des Tages (zählen im Monat schon mit; hier nur, damit sie auch am Tag sichtbar sind)
+function v2ChDay(prof, d) { const done = prof?.challenges || {}; return (S.challenges?.list || []).filter(c => done[c.id] && String(done[c.id]).slice(0, 10) === d).reduce((a, c) => a + num(c.points), 0); }
 function v2DayTable(key, n) {
   const uid = uidFor(key); if (!uid) return `<div class="empty">${esc(clientName(key))} hat sich noch nicht angemeldet.</div>`;
   const prof = S.c.members[uid] || {}, ib = S.c.masters[key] || {}, days = S.c.days[uid] || {};
   const rows = []; let sum = 0;
   for (let i = 0; i < n; i++) {
     const d = addD(today(), -i), D = days[d]; const b = D ? pointsBreakdown(D, prof, ib) : {};
-    const tot = Object.values(b).reduce((a, x) => a + (num(x) || 0), 0); sum += tot;
+    const chd = v2ChDay(prof, d); const tot = Object.values(b).reduce((a, x) => a + (num(x) || 0), 0) + chd; sum += tot;
     const meals = D ? (D.meals || []).length : 0, wk = D ? (D.workouts || []).length : 0;
-    rows.push(`<tr${tot ? "" : ' style="opacity:.55"'}><td>${fmt(d, { weekday: "short", day: "2-digit", month: "2-digit" })}</td>${V2_PK.map(k => `<td class="num">${num(b[k]) || "–"}</td>`).join("")}<td class="num"><b class="gold">${tot}</b></td><td class="tiny muted">${meals} Mahlz. · ${wk} Train.</td></tr>`);
+    rows.push(`<tr${tot ? "" : ' style="opacity:.55"'}><td>${fmt(d, { weekday: "short", day: "2-digit", month: "2-digit" })}</td>${V2_PK.map(k => `<td class="num">${num(b[k]) || "–"}</td>`).join("")}<td class="num">${chd || "–"}</td><td class="num"><b class="gold">${tot}</b></td><td class="tiny muted">${meals} Mahlz. · ${wk} Train.</td></tr>`);
   }
   const m = monthKey(); const ch = chPointsFor(prof, m);
   return `<section class="card"><div class="row between"><h3>Tagespunkte · letzte ${n} Tage</h3><span class="pill gold num">${sum} Punkte</span></div>
-   <div class="tablewrap"><table class="t"><thead><tr><th>Tag</th>${V2_PK.map(k => `<th>${({ checkups: "Check-up" })[k] || PT_LABEL[k] || k}</th>`).join("")}<th>Summe</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
-   <p class="tiny muted">Ernährung: ${PTS.food} Punkte ab 2 getrennt gespeicherten Mahlzeiten pro Tag (nicht pro Mahlzeit). Dazu kommen Challenges: diesen Monat ${ch} Punkte.</p>
+   <div class="tablewrap"><table class="t"><thead><tr><th>Tag</th>${V2_PK.map(k => `<th>${({ checkups: "Check-up" })[k] || PT_LABEL[k] || k}</th>`).join("")}<th>Challenge</th><th>Summe</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+   <p class="tiny muted">Ernährung: ${PTS.food} Punkte ab 2 getrennt gespeicherten Mahlzeiten pro Tag (nicht pro Mahlzeit). Challenges stehen am Tag, an dem sie abgehakt wurden (diesen Monat ${ch} Punkte).</p>
    <div class="row">${[7, 14, 31].map(x => `<button class="btn small ${x === n ? "" : "quiet"}" data-act="v2Days" data-v="${x}">${x} Tage</button>`).join("")}</div></section>`;
 }
 const _coachClientV2 = coachClient;
@@ -80,6 +82,8 @@ const _coachPointsV2 = coachPoints;
 coachPoints = function () { return _coachPointsV2().replace(/data-act="openClient" data-k="([^"]+)"/g, 'data-act="v2OpenPts" data-k="$1"') + `<p class="tiny muted">Tipp: Namen antippen zeigt die Punkte Tag für Tag.</p>`; };
 
 // ---------- 3) Challenges ----------
+const _homeV2pts = VIEWS.home;
+VIEWS.home = () => { const h = _homeV2pts(); const c = S.profile ? v2ChDay(S.profile, today()) : 0; if (!c) return h; return h.replace(/(\d+) Punkte heute/, (m, n) => (+n + c) + " Punkte heute"); };
 const v2ActiveCh = () => (S.challenges?.list || []).filter(c => (!c.start || c.start <= today()) && (!c.end || c.end >= today()));
 // Startseite: Zeile „Challenges“ in den Aufklapp-Zeilen
 const _homeV2 = VIEWS.home;
