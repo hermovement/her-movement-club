@@ -61,11 +61,11 @@ function v2DayTable(key, n) {
     const d = addD(today(), -i), D = days[d]; const b = D ? pointsBreakdown(D, prof, ib) : {};
     const chd = v2ChDay(prof, d); const tot = Object.values(b).reduce((a, x) => a + (num(x) || 0), 0) + chd; sum += tot;
     const meals = D ? (D.meals || []).length : 0, wk = D ? (D.workouts || []).length : 0;
-    rows.push(`<tr${tot ? "" : ' style="opacity:.55"'}><td>${fmt(d, { weekday: "short", day: "2-digit", month: "2-digit" })}</td>${V2_PK.map(k => `<td class="num">${num(b[k]) || "–"}</td>`).join("")}<td class="num">${chd || "–"}</td><td class="num"><b class="gold">${tot}</b></td><td class="tiny muted">${meals} Mahlz. · ${wk} Train.</td></tr>`);
+    rows.push(`<tr${tot ? "" : ' style="opacity:.55"'}><td>${fmt(d, { weekday: "short", day: "2-digit", month: "2-digit" })}</td>${V2_PK.map(k => `<td class="num">${num(b[k]) || "–"}</td>`).join("")}<td class="num">${chd || "–"}</td><td class="num"><b class="gold">${tot}</b></td><td class="tiny muted">${meals} Mahlz. · ${wk} Train.</td><td class="tiny">${D && window.v4GapCell ? v4GapCell(D, d) : "–"}</td></tr>`);
   }
   const m = monthKey(); const ch = chPointsFor(prof, m);
   return `<section class="card"><div class="row between"><h3>Tagespunkte · letzte ${n} Tage</h3><span class="pill gold num">${sum} Punkte</span></div>
-   <div class="tablewrap"><table class="t"><thead><tr><th>Tag</th>${V2_PK.map(k => `<th>${({ checkups: "Check-up" })[k] || PT_LABEL[k] || k}</th>`).join("")}<th>Challenge</th><th>Summe</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
+   <div class="tablewrap"><table class="t"><thead><tr><th>Tag</th>${V2_PK.map(k => `<th>${({ checkups: "Check-up" })[k] || PT_LABEL[k] || k}</th>`).join("")}<th>Challenge</th><th>Summe</th><th></th><th>Längste Pause</th></tr></thead><tbody>${rows.join("")}</tbody></table></div>
    <p class="tiny muted">Ernährung: ${PTS.food} Punkte ab 2 getrennt gespeicherten Mahlzeiten pro Tag (nicht pro Mahlzeit). Challenges stehen am Tag, an dem sie abgehakt wurden (diesen Monat ${ch} Punkte).</p>
    <div class="row">${[7, 14, 31].map(x => `<button class="btn small ${x === n ? "" : "quiet"}" data-act="v2Days" data-v="${x}">${x} Tage</button>`).join("")}</div></section>`;
 }
