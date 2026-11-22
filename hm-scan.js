@@ -62,6 +62,12 @@
   async function lookup(code) {
     code = String(code || "").replace(/\D/g, "");
     if (code.length < 8) { S.meal.scanMsg = "Bitte die ganze Nummer unter dem Strichcode eintippen (8 oder 13 Ziffern)."; drawSheet(); return; }
+    // Schon einmal gescannt? → direkt aus „Meine Lebensmittel“, ohne Internet
+    var known = null; Object.keys(S.foods || {}).forEach(function (id) { var f = S.foods[id]; if (f && f.code === code) known = f; });
+    if (known) {
+      S.meal.items.push(itemFromF([known.name, num(known.kcal), num(known.p), num(known.c), num(known.f), num(known.pg) || 100, known.plabel || "Portion", "mine", known.brand || ""], num(known.pg) || 100));
+      if (!S.meal.name) S.meal.name = known.name; S.meal.scanMsg = ""; drawSheet(); toast(known.name + " hinzugefügt"); return;
+    }
     S.meal.scanMsg = "Suche Produkt " + code + " …"; drawSheet();
     try {
       var res = await fetch("https://world.openfoodfacts.org/api/v2/product/" + code + ".json?fields=product_name,product_name_de,brands,nutriments,serving_quantity,serving_size");
@@ -86,7 +92,18 @@
       S.meal.items.push(it);
       if (!S.meal.name) S.meal.name = name;
       S.meal.scanMsg = "";
-      drawSheet(); toast(name + " hinzugefügt");
+      // Merken: landet in „Meine Lebensmittel“ und ist danach auch über die Suche findbar
+      var saved = false;
+      try {
+        if (!S.mealCtx && S.uid) {
+          var lname = name.toLowerCase(), dup = Object.keys(S.foods || {}).some(function (id) { return (S.foods[id].name || "").toLowerCase() === lname; });
+          if (!dup) {
+            var rec = { name: name, brand: brand, kcal: it.per100.kcal, p: it.per100.p, c: it.per100.c, f: it.per100.f, pg: sq || 100, plabel: it.plabel, code: code };
+            var fid = uidGen(); S.foods = S.foods || {}; S.foods[fid] = rec; writeNow("members/" + S.uid + "/foods/" + fid, rec); saved = true;
+          }
+        }
+      } catch (x) {}
+      drawSheet(); toast(name + " hinzugefügt" + (saved ? " · für die Suche gemerkt" : ""));
     } catch (e) {
       S.meal.scanMsg = "Keine Verbindung zu Open Food Facts. Bitte später nochmal versuchen.";
       drawSheet();
