@@ -58,7 +58,7 @@ function v3DayOk(c, d) {
 }
 function v3Prog(c) {
   if (!c.auto || !S.profile) return null; const target = Math.max(1, num(c.days) || 1); const from = c.start || monthKey() + "-01", to = c.end && c.end < today() ? c.end : today();
-  let n = 0, run = 0, best = 0; for (let d = from; d <= to; d = addD(d, 1)) { if (v3DayOk(c, d)) { n++; run++; best = Math.max(best, run); } else if (d !== today()) run = 0; }
+  let n = 0, run = 0, best = 0; for (let d = from; d <= to; d = addD(d, 1)) { if (v3DayOk(c, d)) { n++; run++; best = Math.max(best, run); } else if (d !== today() && !(window.v5Paused && v5Paused(S.profile, d))) run = 0; }
   const v = c.mode === "streak" ? best : n; return { v, target, done: v >= target, streak: c.mode === "streak" };
 }
 let v3Busy = false;
