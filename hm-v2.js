@@ -6,9 +6,11 @@
 
 // ---------- 1) Zustand merken ----------
 const V2_KEY = "hmV2State";
-const V2_MAX_AGE = 3 * 3600 * 1000;
+const V2_MAX_AGE = 3 * 3600 * 1000; // Entwürfe
+const V2_VIEW_AGE = 20 * 60 * 1000; // Ansicht nur nach kurzem App-Wechsel wiederherstellen
 let v2Restored = false, v2Drafts = {};
-const v2Read = () => { try { const o = JSON.parse(sessionStorage.getItem(V2_KEY) || localStorage.getItem(V2_KEY) || "null"); return o && Date.now() - o.t < V2_MAX_AGE ? o : null; } catch (e) { return null; } };
+// Ansicht (Reiter, Seite) nur aus derselben Sitzung und nur nach kurzem Wechsel; beim frischen Öffnen startet die App auf „Heute“.
+const v2Read = () => { try { const ss = sessionStorage.getItem(V2_KEY); const o = JSON.parse(ss || localStorage.getItem(V2_KEY) || "null"); if (!o || Date.now() - o.t > V2_MAX_AGE) return null; if (!ss || Date.now() - o.t > V2_VIEW_AGE) { delete o.route; delete o.c; delete o.meal; o.scroll = 0; } return o; } catch (e) { return null; } };
 function v2FieldKey(el) {
   if (!el || !/INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.type === "file" || el.type === "password" || el.type === "checkbox" || el.type === "radio") return null;
   if (el.id) return "#" + el.id;
