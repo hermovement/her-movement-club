@@ -21,7 +21,7 @@ const zpClub = {
   get discharge() { return DISCHARGE.map(x => ({ k: x.k, n: x.n, i: V6_DIS_IC[x.k] })); },
   weightAct: "zpWeight",
 };
-const v6On = () => S.sess?.role !== "coach" && typeof smCOk === "function" && smCOk() && !(typeof myWay === "function" && myWay() === "wechsel") && S.cycle && stats();
+const v6On = () => typeof smCOk === "function" && smCOk() && !(typeof myWay === "function" && myWay() === "wechsel") && S.cycle && stats();
 
 // ---------- Zyklus-Seite ----------
 const _cycleV6 = VIEWS.cycle;
