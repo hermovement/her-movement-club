@@ -229,6 +229,7 @@
   .zp-date{display:flex;align-items:center;justify-content:center;gap:10px}
   .zp-date button{background:none;border:1px solid var(--zp-line,var(--line,rgba(255,255,255,.15)));border-radius:999px;color:inherit;font:inherit;padding:6px 12px;cursor:pointer}
   .zp-date button:disabled{opacity:.3}
+  .zp-x{width:38px;height:38px;border-radius:50%;border:1px solid var(--zp-line,var(--line,rgba(255,255,255,.15)));background:var(--zp-soft,rgba(255,255,255,.06));color:inherit;font:inherit;font-size:1rem;display:grid;place-items:center;cursor:pointer;flex:none}
   .zp-pat{display:flex;gap:10px;align-items:flex-start;font-size:.88rem}
   `;
   function css() { if (document.getElementById("zpCss")) return; const s = document.createElement("style"); s.id = "zpCss"; s.textContent = CSS; document.head.appendChild(s); }
@@ -340,9 +341,9 @@
     const sugg = [...new Set([...mine, ...base])].slice(0, 8);
     const secs = [
       ["vor", "Für dich vorgeschlagen", sugg.map(kv => { const [k, l] = kv.split("|"); return item(k, l, l, ICON[l] || "•", has(k, l)); }).join("")],
-      ["blut", "Blutung", A.flowLabels.map((l, i) => item("flow", i, l, FLOWI[i] || "💧", num(e.flow) === i && e.flow != null, 1)).join("")],
+      ["blut", "Blutung", A.flowLabels.map((l, i) => item("flow", i, l, (A.flowIcons || FLOWI)[i] || "💧", num(e.flow) === i && e.flow != null, 1)).join("")],
       ["energie", "Energie", ENERGY.map(([v, l, ic]) => item("energy", v, l, ic, num(e.energy) === v, 1)).join("")],
-      ["schmerz", "Schmerzen", PAIN.map(([v, l, ic]) => item("pain", v, l, ic, e.pain != null && num(e.pain) === v, 1)).join("")],
+      ["schmerz", "Schmerzen", (A.pain || PAIN).map(([v, l, ic]) => item("pain", v, l, ic, e.pain != null && num(e.pain) === v, 1)).join("")],
       ["wohl", "Wohlbefinden", multi("symptoms", WB)],
       ["stimmung", "Stimmung", multi("moods", MOOD)],
       ["ausfluss", "Ausfluss", A.discharge.map(x => item("discharge", x.k, x.n, x.i || "💧", e.discharge === x.k, 1)).join("")],
@@ -354,7 +355,7 @@
     ];
     const prev = addD(d, -1), next = addD(d, 1);
     return `<div class="zp-ed" lang="de">
-      <div class="top"><div style="display:flex;justify-content:space-between;align-items:center"><button class="iconbtn" data-act="zpClose" aria-label="Schließen" style="font-size:1.1rem">✕</button>
+      <div class="top"><div style="display:flex;justify-content:space-between;align-items:center"><button class="zp-x" data-act="zpClose" aria-label="Schließen" style="font-size:1.1rem">✕</button>
         <div class="zp-date"><button data-act="zpEdit" data-d="${prev}" aria-label="Vortag">‹</button><b>${d === t ? "HEUTE" : WD[parseD(d).getDay()] + ", " + fmtS(d)}</b><button data-act="zpEdit" data-d="${next}" aria-label="Nächster Tag" ${next > t ? "disabled" : ""}>›</button></div><span style="width:36px"></span></div>
         <div><h2 style="margin:0;font-style:italic">Wie geht es dir?</h2><span class="zp-muted" style="font-size:.9rem">${st ? "Zyklustag " + st.cd + " · " + PH[st.phase].long : ""}</span></div>
         <div class="zp-cats">${secs.map(([id, n]) => `<button data-act="zpJump" data-s="${id}">${n.replace("Für dich vorgeschlagen", "Vorschläge")}</button>`).join("")}<button data-act="zpJump" data-s="mess">Messungen</button><button data-act="zpJump" data-s="buch">Tagebuch</button></div>
@@ -372,8 +373,8 @@
   window.ZP = { css, head, checkCard, impulseCard, tipsCard, triCard, hormoneCard, patternCard, accuracyCard, quoteCard, editor, patterns, patternText, TIPS, CAT, PH, tipFits, MULTI, addD, diffD, esc };
 
   // Tipp-Details & Alle Tipps
-  ZP.tipSheet = (id) => { const t = TIPS.find(x => x[0] === id); if (!t) return ""; return `<div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="zp-eyebrow">${CAT[t[1]]}</span><button class="iconbtn" data-act="zpClose" aria-label="Schließen">✕</button></div><div style="font-size:3rem;text-align:center">${t[3]}</div><h2 style="margin:0;text-align:center">${esc(t[4])}</h2><div class="zp-card"><b>Warum?</b><p style="margin:0;line-height:1.5">${esc(t[5])}</p></div><div class="zp-card"><b>So geht's</b><p style="margin:0;line-height:1.5">${esc(t[6])}</p></div><p class="zp-muted" style="margin:0;font-size:.75rem">Allgemeine Tipps, kein Ersatz für ärztlichen Rat.</p></div>`; };
-  ZP.allTips = (ph, cat) => { const L = TIPS.filter(t => tipFits(t, ph) && (!cat || t[1] === cat)); return `<div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Tipps · ${PH[ph].n}</h2><button class="iconbtn" data-act="zpClose" aria-label="Schließen">✕</button></div><div class="zp-cats"><button data-act="zpAllTips" data-c="" style="${!cat ? "border-color:var(--zp-gold,#d9b64e)" : ""}">Alle</button>${Object.entries(CAT).map(([k, n]) => `<button data-act="zpAllTips" data-c="${k}" style="${cat === k ? "border-color:var(--zp-gold,#d9b64e)" : ""}">${n}</button>`).join("")}</div><div class="zp-tips" lang="de">${L.map(t => `<button class="zp-tip" data-act="zpTip" data-id="${t[0]}"><i aria-hidden="true">${t[3]}</i><span>${esc(t[4])}</span></button>`).join("")}</div></div>`; };
+  ZP.tipSheet = (id) => { const t = TIPS.find(x => x[0] === id); if (!t) return ""; return `<div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="zp-eyebrow">${CAT[t[1]]}</span><button class="zp-x" data-act="zpClose" aria-label="Schließen">✕</button></div><div style="font-size:3rem;text-align:center">${t[3]}</div><h2 style="margin:0;text-align:center">${esc(t[4])}</h2><div class="zp-card"><b>Warum?</b><p style="margin:0;line-height:1.5">${esc(t[5])}</p></div><div class="zp-card"><b>So geht's</b><p style="margin:0;line-height:1.5">${esc(t[6])}</p></div><p class="zp-muted" style="margin:0;font-size:.75rem">Allgemeine Tipps, kein Ersatz für ärztlichen Rat.</p></div>`; };
+  ZP.allTips = (ph, cat) => { const L = TIPS.filter(t => tipFits(t, ph) && (!cat || t[1] === cat)); return `<div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Tipps · ${PH[ph].n}</h2><button class="zp-x" data-act="zpClose" aria-label="Schließen">✕</button></div><div class="zp-cats"><button data-act="zpAllTips" data-c="" style="${!cat ? "border-color:var(--zp-gold,#d9b64e)" : ""}">Alle</button>${Object.entries(CAT).map(([k, n]) => `<button data-act="zpAllTips" data-c="${k}" style="${cat === k ? "border-color:var(--zp-gold,#d9b64e)" : ""}">${n}</button>`).join("")}</div><div class="zp-tips" lang="de">${L.map(t => `<button class="zp-tip" data-act="zpTip" data-id="${t[0]}"><i aria-hidden="true">${t[3]}</i><span>${esc(t[4])}</span></button>`).join("")}</div></div>`; };
 
   // Suche im Erfassen-Sheet (ohne Neuzeichnen)
   document.addEventListener("input", e => {
