@@ -22,7 +22,9 @@ function v7Budget() {
   const T = targets(); if (!num(T.kcal)) return null;
   const tot = totals(D); const goalK = Math.max(num(T.kcal), V7_FLOOR);
   const R = { kcal: Math.max(0, goalK - tot.kcal), p: Math.max(0, num(T.protein) - tot.p), c: Math.max(0, num(T.carbs) - tot.c), f: Math.max(0, num(T.fat) - tot.f) };
-  const ate = new Set(eaten.map(m => catOf(m.slot)).filter(i => i >= 0));
+  // Extras außerhalb der 4 Mahlzeiten (Gönnung, Luteal-Extra) zählen nicht als Snack
+  const xNames = new Set(meals.filter(m => catOf(m.slot) < 0).flatMap(m => (m.options || []).map(o => o.name)));
+  const ate = new Set(eaten.filter(m => !xNames.has(m.name)).map(m => catOf(m.slot)).filter(i => i >= 0));
   const lastMain = Math.max(-1, ...[0, 1, 3].filter(i => ate.has(i)).map(i => [0, 1, 3].indexOf(i)));
   // Luteal-Extra: in der Lutealphase vorab reservieren, falls noch nicht gegessen
   const g = typeof cycGroup === "function" ? cycGroup(today()) : null; const P = typeof prog === "function" ? prog() : null;
@@ -71,7 +73,8 @@ planMealsSection = function () {
   try {
     S.v7 = {}; const meals = (inbox().nutrition?.meals || []).map((m, mi) => Object.assign({}, m, { mi, opts: (m.options || []).map((o, oi) => ({ o, oi })).filter(x => x.o.name) })).filter(m => m.opts.length);
     const ph = myPhase(); const cur = guessSlot(); const g = cycGroup(today());
-    const ateCat = new Set((day(today()).meals || []).map(m => catOf(m.slot)));
+    const xN = new Set(meals.filter(m => catOf(m.slot) < 0).flatMap(m => m.opts.map(x => x.o.name)));
+    const ateCat = new Set((day(today()).meals || []).filter(m => !xN.has(m.name)).map(m => catOf(m.slot)));
     const protPrio = b.R.p >= 30 || (b.R.kcal > 0 && b.R.p * 4 / b.R.kcal > 0.3);
     const head = b.done
       ? `<section class="card"><b>Alle Mahlzeiten für heute eingetragen 🎉</b><p class="small muted" style="margin:4px 0 0">${Math.round(b.tot.kcal)} von ${Math.round(num(b.T.kcal))} kcal · ${Math.round(b.tot.p)} von ${Math.round(num(b.T.protein))} g Eiweiß.</p></section>`
